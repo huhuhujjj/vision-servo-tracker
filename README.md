@@ -1,5 +1,7 @@
 # vision-servo-tracker
 
+[![Checks](https://github.com/huhuhujjj/vision-servo-tracker/actions/workflows/checks.yml/badge.svg)](https://github.com/huhuhujjj/vision-servo-tracker/actions/workflows/checks.yml)
+
 基于 Logitech C922、YOLO26n 和 ByteTrack 的目标检测与点选跟踪原型。主机端输出选定目标相对画面中心的偏差，供后续双轴舵机控制使用。
 
 ## 当前进度
@@ -29,7 +31,7 @@ python -m venv .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu128
-.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"
 .\.venv\Scripts\python.exe -m vision_servo_tracker.models
 .\.venv\Scripts\python.exe -m vision_servo_tracker.desktop
 ```
@@ -107,12 +109,26 @@ NCNN 的推理尺寸必须与导出尺寸一致。将416改为640前，先用 `v
 
 核心逻辑与网页协议测试只用 Python 标准库，不打开摄像头、不下载模型：
 
+只查看代码或运行这些测试时，直接安装基础包即可，不需要安装 PyTorch、OpenCV 或下载权重：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install .
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+开发时也可不安装包，直接从源码测试：
+
 ```powershell
 $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 ```
 
 它们覆盖重叠框点选、目标丢失、类别变化、偏差方向、离线清空、帧过期及 HTTP 控制请求。测试通过不能代替树莓派部署和舵机联调。
+
+每次推送和提交 Pull Request 后，GitHub Actions 会在 Windows、Linux 的 Python 3.13 环境检查安装和核心测试；Linux 任务还检查安装脚本的 Bash 语法及网页脚本的 JavaScript 语法。流程不打开摄像头、不安装推理依赖、不发布模型。
+
+后续验收项目见 [开发计划](docs/roadmap.md)。提交问题时可使用仓库中的故障报告模板，附上运行平台、复现步骤和报错即可，不需要提供摄像头画面或密码。
 
 ## 目录
 

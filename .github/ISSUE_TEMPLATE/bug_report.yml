@@ -1,0 +1,25 @@
+name: 故障报告
+description: 记录可以复现的识别、跟踪或部署问题
+labels: []
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 操作系统、Python版本、摄像头和推理设备；树莓派请注明系统架构。
+      placeholder: Windows / Python / C922 / CUDA，或 Raspberry Pi OS / aarch64 / CPU
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 使用的命令、操作步骤、期望结果与实际结果。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错或日志
+      description: 贴出相关错误即可；请移除密码、令牌、私人地址及摄像头画面。
+      render: text
