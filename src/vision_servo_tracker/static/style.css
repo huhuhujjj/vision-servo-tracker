@@ -1,0 +1,22 @@
+body {
+  margin: 0;
+  background: #111820;
+  color: #edf2f6;
+  font: 16px system-ui, sans-serif;
+}
+main { max-width: 1100px; margin: auto; padding: 24px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+h1 { font-size: 24px; }
+canvas { width: 100%; height: auto; background: #06090c; border-radius: 10px; cursor: crosshair; }
+canvas.offline { opacity: 0.35; cursor: default; }
+button { padding: 12px 20px; border: 0; border-radius: 8px; background: #f4cb65; color: #16202a; font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+p { line-height: 1.7; }
+#status { font-size: 18px; min-height: 30px; }
+#message { color: #f4cb65; min-height: 24px; }
+.hint { color: #b5c2ce; }
+@media (max-width: 600px) {
+  main { padding: 12px; }
+  h1 { font-size: 20px; }
+  button { padding: 10px 12px; }
+}

@@ -1,0 +1,3 @@
+# 树莓派使用 CPU 包，防止默认 ARM64 依赖拉取 CUDA 组件。
+torch==2.11.0+cpu
+torchvision==0.26.0+cpu

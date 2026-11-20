@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vision-servo-tracker"
+version = "0.1.0"
+description = "C922 object detection, target selection and image-center offsets"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["ultralytics==8.4.213", "lap>=0.5.12,<0.6"]
+
+[project.optional-dependencies]
+pi = ["ncnn"]
+
+[project.scripts]
+vision-track = "vision_servo_tracker.desktop:main"
+vision-web = "vision_servo_tracker.web:main"
+vision-download-model = "vision_servo_tracker.models:main"
+vision-export-ncnn = "vision_servo_tracker.export:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vision_servo_tracker = ["static/*.html", "static/*.css", "static/*.js"]

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C922 目标跟踪</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="control-token" content="__TOKEN__">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>C922 目标跟踪</h1>
+      <button id="release" type="button">解除锁定</button>
+    </header>
+    <p class="hint">点击带编号的框选择目标。框重叠时优先选较小框，丢失后保留原选择。</p>
+    <canvas id="view" width="1280" height="720" aria-label="实时摄像头检测画面"></canvas>
+    <p id="status" role="status">正在连接…</p>
+    <p id="message" role="status"></p>
+    <p class="hint">dx 向右为正 · dy 向上为正 · 默认左右镜像</p>
+  </main>
+</body>
+</html>
