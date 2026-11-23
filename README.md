@@ -18,7 +18,15 @@
 
 模型采用 Ultralytics 官方 COCO 预训练权重，没有进行模型训练、微调或无人机视角验证。快速移动、遮挡、手机转动后的类别变化和目标重新入画仍需测试。
 
-实物照片与硬件联调记录见 [项目进展](docs/progress.md)。
+## 实物进展
+
+以下照片记录了双轴云台、树莓派与 C922，以及 PCA9685 控制板的装配和联调状态。[查看详细测试记录](docs/progress.md)。
+
+| 双轴云台 | 树莓派与 C922 | PCA9685 与舵机 |
+| --- | --- | --- |
+| <img src="docs/images/dual-axis-gimbal.jpg" alt="双轴云台侧面" width="220"> | <img src="docs/images/raspberry-pi-c922.jpg" alt="树莓派 5 与 C922" width="220"> | <img src="docs/images/pca9685-servos.jpg" alt="PCA9685 控制板与舵机接线" width="220"> |
+
+上方舵机控制俯仰，下方舵机控制水平转动；已分别验证两台舵机的短时动作。C922 画面经树莓派通过 Wi-Fi 转发到主机，已用于实时识别。摄像头随云台运动的画面位移及视觉闭环跟随仍需验证。
 
 ## Windows 运行
 
