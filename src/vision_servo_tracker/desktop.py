@@ -13,6 +13,7 @@ from time import perf_counter
 import cv2
 from ultralytics import YOLO
 from .target_lock import Detection, TargetLock, TargetState
+from .stream import NetworkCamera
 
 
 CAMERA_INDEX = 0
@@ -83,7 +84,9 @@ def main() -> int:
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL, help="Local model file.")
     parser.add_argument("--device", default="0", help="Inference device: 0 for CUDA, cpu for CPU.")
     parser.add_argument("--report-dir", type=Path, default=Path("runs"))
-    parser.add_argument("--camera", type=int, default=CAMERA_INDEX)
+    sources = parser.add_mutually_exclusive_group()
+    sources.add_argument("--camera", type=int, default=CAMERA_INDEX)
+    sources.add_argument("--source", help="HTTP/HTTPS MJPEG stream URL.")
     parser.add_argument("--verify-frames", type=int, default=0,
                         help="Verify a fixed number of frames without opening a window.")
     parser.add_argument("--target-class", default="any",
@@ -104,22 +107,27 @@ def main() -> int:
     if not model_path.is_file():
         print(f"找不到模型：{model_path}。先运行 python -m vision_servo_tracker.models。")
         return 1
-    backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
-    camera = cv2.VideoCapture(args.camera, backend)
-    if not camera.isOpened():
-        camera.release()
-        print(
-            f"打不开摄像头索引 {args.camera}。请确认 C922 已插好、没有被其他应用占用。"
-        )
-        return 1
-
-    camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-    camera.set(cv2.CAP_PROP_FPS, 30)
+    if args.source:
+        try:
+            camera = NetworkCamera(args.source)
+        except ValueError as exc:
+            parser.error(str(exc))
+    else:
+        backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
+        camera = cv2.VideoCapture(args.camera, backend)
+        if not camera.isOpened():
+            camera.release()
+            print(f"打不开摄像头索引 {args.camera}。请检查连接和占用。")
+            return 1
+        camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+        camera.set(cv2.CAP_PROP_FPS, 30)
     report = {
         "started_at": datetime.now().astimezone().isoformat(),
-        "camera_index": args.camera,
+        "camera_index": None if args.source else args.camera,
+        "source_type": "http_mjpeg" if args.source else "local_camera",
+        "stream_connections": 0,
         "model": model_path.name,
         "device": args.device,
         "tracker": "bytetrack.yaml",
@@ -143,6 +151,9 @@ def main() -> int:
     selections = deque(maxlen=100)
     clicks = SimpleQueue()
     pending_key = -1
+    generation = None
+    last_frame_at = perf_counter()
+    detections = []
     report.update(target_class=args.target_class, target_selection_count=0,
                   target_visible_frames=0, target_lost_frames=0, target_centered_frames=0)
     run_started = perf_counter()
@@ -157,7 +168,7 @@ def main() -> int:
         model = YOLO(str(model_path))
         if args.target_class != "any" and args.target_class not in model.names.values():
             raise ValueError(f"模型没有类别 {args.target_class}，请使用 COCO 类别英文名称。")
-        print(f"使用摄像头索引 {args.camera}，模型 {MODEL_NAME}，跟踪器 ByteTrack。")
+        print(f"视频源：{'网络MJPEG' if args.source else args.camera}，模型 {model_path.name}，ByteTrack。")
         print(f"左右镜像：{'已开启' if args.mirror else '已关闭'}；识别、显示和偏差都以当前画面为准。")
         if args.verify_frames:
             print(f"开始读取并处理 {args.verify_frames} 帧，验证完成后自动关闭摄像头。")
@@ -183,7 +194,43 @@ def main() -> int:
         while True:
             ok, frame = camera.read()
             if not ok:
-                raise RuntimeError("没有读到摄像头画面。请检查 C922 连接和摄像头占用情况。")
+                if not args.source:
+                    raise RuntimeError("没有读到摄像头画面，请检查连接和占用。")
+                if not camera.healthy():
+                    target_lock.release()
+                    detections = []
+                    while not clicks.empty():
+                        clicks.get()
+                    report["last_target"] = {"status": "offline", "offset_px": None,
+                                             "offset_normalized": None, "box": None}
+                    if not args.verify_frames:
+                        import numpy as np
+                        blank = np.zeros((720, 1280, 3), dtype=np.uint8)
+                        cv2.putText(blank, "STREAM OFFLINE | No position output | Q: quit",
+                                    (30, 320), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 220, 255), 2)
+                        cv2.imshow(WINDOW_NAME, blank)
+                if args.verify_frames and perf_counter() - last_frame_at > 15:
+                    raise RuntimeError("网络视频验证超时，请检查取流服务和SSH转发。")
+                if not args.verify_frames:
+                    key = cv2.waitKey(10) & 0xFF
+                    if key in (ord("q"), ord("Q")) or cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
+                        report["status"] = "stopped_by_user"
+                        return 0
+                    if key != 255:
+                        pending_key = key
+                continue
+            last_frame_at = perf_counter()
+            if args.source and camera.generation != generation:
+                # 新连接的临时ID没有身份连续性，清空选择并重置跟踪器。
+                target_lock.release()
+                previous_ids = set()
+                pending_key = -1
+                while not clicks.empty():
+                    clicks.get()
+                for tracker in getattr(getattr(model, "predictor", None), "trackers", []):
+                    tracker.reset()
+                generation = camera.generation
+                report["stream_connections"] += 1
 
             # 在推理前镜像一次，显示、检测框与点击坐标才能保持一致。
             if args.mirror:
