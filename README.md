@@ -155,7 +155,7 @@ $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 ```
 
-它们覆盖重叠框点选、目标丢失、类别变化、偏差方向、离线清空、帧过期及 HTTP 控制请求。测试通过不能代替树莓派部署和舵机联调。
+它们覆盖重叠框点选、目标丢失、类别变化、偏差方向、离线清空、帧过期、HTTP 控制请求，以及运动计划的限步长和停止条件。测试通过不能代替树莓派部署和舵机联调。
 
 每次推送和提交 Pull Request 后，GitHub Actions 会在 Windows、Linux 的 Python 3.13 环境检查安装和核心测试；Linux 任务还检查安装脚本的 Bash 语法及网页脚本的 JavaScript 语法。流程不打开摄像头、不安装推理依赖、不发布模型。
 
@@ -167,6 +167,7 @@ python -m unittest discover -s tests -v
 src/vision_servo_tracker/
   desktop.py           主机摄像头窗口
   target_lock.py       目标选择、状态和中心偏差
+  motion.py            校准后才可启用的限幅运动计划；不直接输出 PWM
   web.py               树莓派推理线程与 HTTP 服务
   models.py            官方预训练权重下载
   export.py            NCNN 导出入口
